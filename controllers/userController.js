@@ -1,18 +1,23 @@
 const User = require('../models/User');
+const bcrypt = require('bcrypt');
 
 // Registro de usuario
 const registerUser = async (req, res) => {
   try {
-    const { email, fullName, encryptedPassword } = req.body;
+    const { email, fullName, password } = req.body;
 
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(409).json({ message: 'El usuario ya existe' });
     }
 
-    const newUser = new User({ email, fullName, encryptedPassword });
+    const newUser = new User({ email, fullName, encryptedPassword: password });
     const saved = await newUser.save();
-    res.status(201).json(saved);
+
+    const userResponse = saved.toObject();
+    delete userResponse.encryptedPassword;
+
+    res.status(201).json(userResponse);
   } catch (error) {
     res.status(500).json({ message: 'Error al registrar usuario', error });
   }
@@ -21,18 +26,22 @@ const registerUser = async (req, res) => {
 // Login (validación simple)
 const loginUser = async (req, res) => {
   try {
-    const { email, encryptedPassword } = req.body;
+    const { email, password } = req.body;
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-    if (user.encryptedPassword !== encryptedPassword) {
-      return res.status(401).json({ message: 'Contraseña incorrecta' });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
-    res.json({ message: 'Login exitoso', user });
+    const userResponse = user.toObject();
+    delete userResponse.encryptedPassword;
+
+    res.json({ message: 'Login exitoso', user: userResponse });
   } catch (error) {
-    res.status(500).json({ message: 'Error al iniciar sesión', error });
+    res.status(500).json({ message: 'Error al iniciar sesión', error: error.message });
   }
 };
 
