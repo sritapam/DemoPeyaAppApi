@@ -10,6 +10,11 @@ const CartItemSchema = new mongoose.Schema({
 });
 
 const OrderSchema = new mongoose.Schema({
+  userEmail: {
+    type: String,
+    required: true,
+    unique: true
+  },
   orderId: {
     type: String,
     required: true,
